@@ -3,41 +3,46 @@
   Available on browser console as ctrl. (exports axiom)
 */
 
-
 foam.CLASS({
   package: 'foam.nanos.controller',
   name: 'ApplicationController',
   extends: 'foam.u2.Element',
 
-  arequire: function() { return foam.nanos.client.ClientBuilder.create(); },
-
   documentation: 'FOAM Application Controller.',
 
   implements: [
-    'foam.nanos.client.Client',
+    'foam.nanos.client.Client'
   ],
 
   requires: [
+    'foam.nanos.auth.Group',
+    'foam.nanos.auth.User',
+    'foam.nanos.u2.navigation.TopNavigation',
+    'foam.nanos.auth.SignInView',
     'foam.u2.stack.Stack',
-    'foam.u2.stack.StackView',
-    'foam.nanos.auth.User'
-  ],
-
-  exports: [
-    'stack',
-    'user',
-    'logo',
-    'signUpEnabled',
-    'webApp',
-    'requestLogin',
-    'loginSuccess',
-    'as ctrl',
-    'wrapCSS as installCSS'
+    'foam.nanos.auth.resetPassword.ResetView',
+    'foam.u2.stack.StackView'
   ],
 
   imports: [
+    'installCSS',
     'sessionSuccess',
-    'installCSS'
+    'window'
+  ],
+
+  exports: [
+    'as ctrl',
+    'group',
+    'loginSuccess',
+    'logo',
+    'requestLogin',
+    'signUpEnabled',
+    'stack',
+    'currentMenu',
+    'menuListener',
+    'user',
+    'webApp',
+    'wrapCSS as installCSS'
   ],
 
   css: `
@@ -73,6 +78,12 @@ foam.CLASS({
       factory: function() { return this.User.create(); }
     },
     {
+      class: 'foam.core.FObjectProperty',
+      of: 'foam.nanos.auth.Group',
+      name: 'group',
+      factory: function() { return this.Group.create(); }
+    },
+    {
       class: 'Boolean',
       name: 'signUpEnabled',
       adapt: function(v) {
@@ -81,15 +92,16 @@ foam.CLASS({
     },
     {
       class: 'Boolean',
-      name: 'loginSuccess',
-      value: false
+      name: 'loginSuccess'
     },
-    'logo',
+    { class: 'URL', name: 'logo' },
+    'currentMenu',
     'webApp',
     'primaryColor',
     'secondaryColor',
     'tableColor',
-    'accentColor'  
+    'tableHoverColor',
+    'accentColor'
   ],
 
   methods: [
@@ -97,70 +109,104 @@ foam.CLASS({
       this.SUPER();
       var self = this;
 
-      // get current user, else show login
-      this.auth.getCurrentUser(null).then(function (result) {
-        self.loginSuccess = result ? true : false;
-        self.user.copyFrom(result);
-        return self.accountDAO.where(self.EQ(self.Account.OWNER, self.user.id)).limit(1).select();
-      })
-      .then(function (result) {
-        self.account.copyFrom(result.array[0]);
-      })
-      .catch(function (err) {
-        self.requestLogin();
-      });
+      this.getCurrentUser();
 
       window.onpopstate = function(event) {
         if ( location.hash != null ) {
           var hid = location.hash.substr(1);
 
           hid && self.menuDAO.find(hid).then(function(menu) {
-            menu && menu.launch(this,null);
-         })
+            menu && menu.launch(this, null);
+          });
         }
       };
+
       window.onpopstate();
     },
 
     function initE() {
       this
         .addClass(this.myClass())
-        .tag({class: 'foam.u2.navigation.TopNavigation'})
+        .tag({class: 'foam.nanos.u2.navigation.TopNavigation'})
         .start('div').addClass('stack-wrapper')
           .tag({class: 'foam.u2.stack.StackView', data: this.stack, showActions: false})
-        .end()
+        .end();
     },
-    
-    //CSS preprocessor, works on classes instantiated in subContext
+
+    function setDefaultMenu() {
+      // Don't select default if menu already set
+      if ( this.window.location.hash || ! this.user.group ) return;
+
+      this.groupDAO.find(this.user.group).then(function (group) {
+        this.group.copyFrom(group);
+        this.window.location.hash = group.defaultMenu;
+      }.bind(this));
+    },
+
+    function getCurrentUser() {
+      var self = this;
+
+      // get current user, else show login
+      this.auth.getCurrentUser(null).then(function (result) {
+        self.loginSuccess = !! result;
+        if ( result ) {
+          self.user.copyFrom(result);
+          self.onUserUpdate();
+        }
+      })
+      .catch(function (err) {
+        self.requestLogin().then(function() {
+          self.getCurrentUser();
+        });
+      });
+    },
+
+    // CSS preprocessor, works on classes instantiated in subContext
     function wrapCSS(text, id) {
       if ( text ) {
         if ( ! this.accentColor ) {
           var self = this;
+
           this.accentColor$.sub(function(s) {
             self.wrapCSS(text, id);
             s.detach();
           });
         }
+
         this.installCSS(text.
-          replace(/%PRIMARYCOLOR%/g, this.primaryColor).
-          replace(/%SECONDARYCOLOR%/g, this.secondaryColor).
-          replace(/%TABLECOLOR%/g, this.tableColor).
-          replace(/%ACCENTCOLOR%/g, this.accentColor),
+          replace(/%PRIMARYCOLOR%/g,    this.primaryColor).
+          replace(/%SECONDARYCOLOR%/g,  this.secondaryColor).
+          replace(/%TABLECOLOR%/g,      this.tableColor).
+          replace(/%TABLEHOVERCOLOR%/g, this.tableHoverColor).
+          replace(/%ACCENTCOLOR%/g,     this.accentColor),
           id);
       }
     },
 
-    function requestLogin(){
+    function requestLogin() {
       var self = this;
+
       // don't go to log in screen if going to reset password screen
-      if ( location.hash != null && location.hash === '#reset' ) {
-        return;
-      }
+      if ( location.hash != null && location.hash === '#reset')
+        return new Promise(function (resolve, reject) {
+          self.stack.push({ class: 'foam.nanos.auth.resetPassword.ResetView' });
+          self.loginSuccess$.sub(resolve);
+        });
 
       return new Promise(function(resolve, reject) {
         self.stack.push({ class: 'foam.nanos.auth.SignInView' });
         self.loginSuccess$.sub(resolve);
       });
+    }
+  ],
+
+  listeners: [
+    function onUserUpdate() {
+      this.setDefaultMenu();
+    },
+
+    function menuListener(m) {
+      this.currentMenu = m;
     }
   ]
 });

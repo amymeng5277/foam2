@@ -547,8 +547,10 @@ foam.CLASS({
 
   properties: [
     {
+      class: 'Object',
       /** @private */
-      name: 'results_',
+      name: 'results',
+      javaType: 'java.util.HashSet',
       hidden: true,
       factory: function() { return {}; }
     }
@@ -560,8 +562,8 @@ foam.CLASS({
         ignore it */
       name: 'put',
       code: function put(obj, sub) {
-        if ( ! this.results_[obj.id] ) {
-          this.results_[obj.id] = true;
+        if ( ! this.results[obj.id] ) {
+          this.results[obj.id] = true;
           return this.delegate.put(obj, sub);
         }
       }
@@ -720,6 +722,7 @@ foam.CLASS({
       code: function(o) {
         this.dao.put(o);
       },
+      javaCode: `getDao().put(obj);`,
       swiftCode: '_ = try? dao?.put(obj)',
     },
     {
@@ -727,11 +730,13 @@ foam.CLASS({
       code: function(o) {
         this.dao.remove(o);
       },
+      javaCode: `getDao().remove(obj);`,
       swiftCode: '_ = try? dao?.remove(obj)',
     },
     {
       name: 'eof',
       code: function() {},
+      javaCode: ``,
       swiftCode: '// NOOP',
     },
     {
@@ -739,6 +744,7 @@ foam.CLASS({
       code: function() {
         this.dao.removeAll();
       },
+      javaCode: `getDao().removeAll();`,
       swiftCode: '_ = try? dao?.removeAll()',
     }
   ]

@@ -18,14 +18,14 @@ import foam.util.Email;
 import foam.util.LRULinkedHashMap;
 import foam.util.Password;
 import foam.util.SafetyUtil;
-import javax.security.auth.AuthPermission;
 import java.security.Permission;
 import java.util.*;
 import javax.naming.AuthenticationException;
+import javax.security.auth.AuthPermission;
 
 public class UserAndGroupAuthService
-    extends    ContextAwareSupport
-    implements AuthService, NanoService
+  extends    ContextAwareSupport
+  implements AuthService, NanoService
 {
   protected DAO userDAO_;
   protected DAO groupDAO_;
@@ -45,7 +45,7 @@ public class UserAndGroupAuthService
 
   public User getCurrentUser(X x) throws AuthenticationException {
     // fetch context and check if not null or user id is 0
-    Session session = (Session) x.get(Session.class);
+    Session session = x.get(Session.class);
     if ( session == null || session.getUserId() == 0 ) {
       throw new AuthenticationException("User not found");
     }
@@ -56,8 +56,6 @@ public class UserAndGroupAuthService
       throw new AuthenticationException("User not found");
     }
 
-    // store user and return
-    session.setX(getX().put("user", user));
     return (User) Password.sanitize(user);
   }
 
@@ -114,9 +112,9 @@ public class UserAndGroupAuthService
 
     challengeMap.remove(userId);
 
-    Session session = (Session) x.get(Session.class);
+    Session session = x.get(Session.class);
     session.setUserId(user.getId());
-    session.setX(getX().put("user", user));
+    session.setContext(session.getContext().put("user", user));
     sessionDAO_.put(session);
     return (User) Password.sanitize(user);
   }
@@ -139,22 +137,14 @@ public class UserAndGroupAuthService
       throw new AuthenticationException("Invalid Password");
     }
 
-    Session session = (Session) x.get(Session.class);
+    Session session = x.get(Session.class);
     session.setUserId(user.getId());
-    session.setX(getX().put("user", user));
+    session.setContext(session.getContext().put("user", user));
     sessionDAO_.put(session);
     return (User) Password.sanitize(user);
   }
 
   public User loginByEmail(X x, String email, String password) throws AuthenticationException {
-    if ( SafetyUtil.isEmpty(email) || ! Email.isValid(email) ) {
-      throw new AuthenticationException("Invalid email");
-    }
-
-    if ( SafetyUtil.isEmpty(password) || ! Password.isValid(password) ) {
-      throw new AuthenticationException("Invalid password");
-    }
-
     Sink sink = new ListSink();
     sink = userDAO_.where(MLang.EQ(User.EMAIL, email.toLowerCase())).limit(1).select(sink);
 
@@ -169,12 +159,12 @@ public class UserAndGroupAuthService
     }
 
     if ( ! Password.verify(password, user.getPassword()) ) {
-      throw new AuthenticationException("Invalid password");
+      throw new AuthenticationException("Incorrect password");
     }
 
-    Session session = (Session) x.get(Session.class);
+    Session session = x.get(Session.class);
     session.setUserId(user.getId());
-    session.setX(getX().put("user", user));
+    session.setContext(session.getContext().put("user", user));
     sessionDAO_.put(session);
     return (User) Password.sanitize(user);
   }
@@ -188,7 +178,7 @@ public class UserAndGroupAuthService
       return false;
     }
 
-    Session session = (Session) x.get(Session.class);
+    Session session = x.get(Session.class);
     if ( session == null || session.getUserId() == 0 ) {
       return false;
     }
@@ -198,12 +188,21 @@ public class UserAndGroupAuthService
       return false;
     }
 
-    Group group = (Group) user.getGroup();
-    if ( group == null ) {
-      return false;
+    try {
+      String groupId = (String) user.getGroup();
+
+      while ( ! SafetyUtil.isEmpty(groupId) ) {
+        Group group = (Group) groupDAO_.find(groupId);
+
+        if ( group == null ) break;
+
+        if ( group.implies(permission) ) return true;
+        groupId = group.getParent();
+      }
+    } catch (Throwable t) {
     }
 
-    return group.implies(permission);
+    return false;
   }
 
   public Boolean check(foam.core.X x, String permission) {
@@ -219,7 +218,7 @@ public class UserAndGroupAuthService
       throw new RuntimeException("Invalid parameters");
     }
 
-    Session session = (Session) x.get(Session.class);
+    Session session = x.get(Session.class);
     if ( session == null || session.getUserId() == 0 ) {
       throw new AuthenticationException("User not found");
     }
@@ -265,7 +264,7 @@ public class UserAndGroupAuthService
     user.setPreviousPassword(user.getPassword());
     user.setPassword(Password.hash(newPassword));
     user = (User) userDAO_.put(user);
-    session.setX(getX().put("user", user));
+    session.setContext(session.getContext().put("user", user));
     return (User) Password.sanitize(user);
   }
 
@@ -309,7 +308,7 @@ public class UserAndGroupAuthService
    * of the current context
    */
   public void logout(X x) {
-    Session session = (Session) x.get(Session.class);
+    Session session = x.get(Session.class);
     if ( session != null && session.getUserId() != 0 ) {
       sessionDAO_.remove(session);
     }

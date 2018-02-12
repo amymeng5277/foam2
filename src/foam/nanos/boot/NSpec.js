@@ -18,7 +18,6 @@ foam.CLASS({
 
   tableColumns: [ 'name', 'lazy', 'serve', 'authenticate', /*'serviceClass',*/ 'configure' ],
 
-
   properties: [
     {
       class: 'String',
@@ -93,7 +92,7 @@ foam.CLASS({
     {
       class: 'FObjectProperty',
       name: 'service',
-      view: 'foam.u2.view.FObjectView'
+      view: { class: 'foam.u2.view.FObjectView' }
     }
     // TODO: permissions, keywords, lazy, parent
   ],
@@ -101,22 +100,25 @@ foam.CLASS({
   methods: [
     {
       name: 'saveService',
-      args: [ { name: 'service', javaType: 'Object' } ],
+      args: [
+        { name: 'x', javaType: 'foam.core.X' },
+        { name: 'service', javaType: 'Object' }
+      ],
       javaCode: `
+      /*
         System.err.println("saveService: " + this.getName());
         if ( service instanceof FObject ) {
           setService((FObject) service);
-          DAO dao = (DAO) getX().get("nSpecDAO");
+          DAO dao = (DAO) x.get("nSpecDAO");
           dao.put(this);
         }
+        */
       `
     },
     {
       name: 'createService',
       args: [
-        {
-          name: 'x', javaType: 'foam.core.X'
-        }
+        { name: 'x', javaType: 'foam.core.X' }
       ],
       javaReturns: 'java.lang.Object',
       javaCode: `
@@ -125,7 +127,7 @@ foam.CLASS({
         if ( getServiceClass().length() > 0 ) {
           Object service = Class.forName(getServiceClass()).newInstance();
           // TODO: doesn't work with DAO's, fix
-          // saveService(service);
+          // saveService(x, service);
           return service;
         }
 
@@ -133,7 +135,7 @@ foam.CLASS({
         try {
           shell.set("x", x);
           Object service = shell.eval(getServiceScript());
-          saveService(service);
+          saveService(x, service);
           return service;
         } catch (EvalError e) {
           System.err.println("NSpec serviceScript error: " + getServiceScript());

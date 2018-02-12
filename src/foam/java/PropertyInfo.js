@@ -53,11 +53,11 @@ foam.CLASS({
     'propRequired',
     'jsonParser',
     'csvParser',
+    'cloneProperty',
     {
       name: 'methods',
       factory: function() {
-
-        return [
+        var m = [
           {
             name: 'getName',
             visibility: 'public',
@@ -97,7 +97,7 @@ foam.CLASS({
             type: 'int',
             visibility: 'public',
             args: [ { name: 'o1', type: 'Object' }, { name: 'o2', type: 'Object' } ],
-            body: 'return compareValues(get_(o1), get_(o2));'
+            body: 'return foam.util.SafetyUtil.compare(get_(o1), get_(o2));'
           },
           {
             name: 'comparePropertyToObject',
@@ -105,6 +105,13 @@ foam.CLASS({
             visibility: 'public',
             args: [ { name: 'key', type: 'Object' }, { name: 'o', type: 'Object' } ],
             body: 'return foam.util.SafetyUtil.compare(cast(key), get_(o));'
+          },
+          {
+            name: 'comparePropertyToValue',
+            type: 'int',
+            visibility: 'public',
+            args: [ { name: 'key', type: 'Object' }, { name: 'value', type: 'Object' } ],
+            body: 'return foam.util.SafetyUtil.compare(cast(key), cast(value));'
           },
           {
             name: 'jsonParser',
@@ -169,9 +176,21 @@ foam.CLASS({
             type: 'boolean',
             args: [ { name: 'o', type: 'Object' } ],
             /* TODO: revise when/if expression support is added to Java */
-            body: `return compareValues(get_(o), ${this.propValue}) == 0;`
+            body: `return foam.util.SafetyUtil.compare(get_(o), ${this.propValue}) == 0;`
           }
-        ]
+        ];
+
+        if ( this.cloneProperty != null ) {
+          m.push({
+            name: 'cloneProperty',
+            visibility: 'public',
+            type: 'void',
+            args: [ { type: 'foam.core.FObject', name: 'source' },
+                    { type: 'foam.core.FObject', name: 'dest' } ],
+            body: this.cloneProperty
+          });
+        }
+        return m;
       }
     }
   ]

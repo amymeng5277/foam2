@@ -33,7 +33,7 @@ foam.CLASS({
             maxAttempts: -1,
             delegate: this.HTTPBox.create({
               method: 'POST',
-              url: 'nSpecDAO'
+              url: 'service/nSpecDAO'
             })
           })
         });
@@ -74,16 +74,21 @@ foam.CLASS({
         ]
       };
 
+      var references = [];
+
       self.nSpecDAO.where(self.EQ(self.NSpec.SERVE, true)).select({
         put: function(spec) {
           if ( spec.client ) {
             client.exports.push(spec.name);
 
+            var json = JSON.parse(spec.client);
+
+            references = references.concat(foam.json.references(self.__context__, json));
+
             client.properties.push({
               name: spec.name,
               factory: function() {
-                var json = JSON.parse(spec.client);
-                if ( ! json.serviceName ) json.serviceName = spec.name;
+                if ( ! json.serviceName ) json.serviceName = 'service/' + spec.name;
                 if ( ! json.class       ) json.class       = 'foam.dao.EasyDAO'
                 if ( ! json.daoType     ) json.daoType     = 'CLIENT';
                 return foam.json.parse(json, null, this);
@@ -93,8 +98,12 @@ foam.CLASS({
           }
         },
         eof: function() {
-          foam.CLASS(client);
-          resolve(foam.nanos.client.Client);
+          Promise.all(references).then(function() {
+            resolve(foam.core.Model.create(client));
+          });
+//          resolve(foam.core.Model.create(client));
+//          foam.CLASS(client);
+//          resolve(foam.nanos.client.Client);
         }
       });
     }
