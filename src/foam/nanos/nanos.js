@@ -6,6 +6,10 @@
 
 FOAM_FILES([
   { name: 'foam/nanos/fs/File' },
+  { name: 'foam/nanos/fs/FileProperty' },
+  { name: 'foam/nanos/fs/FileDAODecorator' },
+  { name: 'foam/nanos/fs/FileArray' },
+  { name: 'foam/nanos/fs/FileArrayDAODecorator' },
   { name: "foam/nanos/app/AppConfig" },
   { name: "foam/nanos/controller/ApplicationController" },
   { name: "foam/nanos/app/Mode" },
@@ -16,6 +20,7 @@ FOAM_FILES([
   { name: "foam/nanos/auth/EnabledAware", flags: ['js'] },
   { name: "foam/nanos/auth/EnabledAwareInterface", flags: ['java'] },
   { name: "foam/nanos/auth/Group" },
+  { name: "foam/nanos/auth/ServiceProvider" },
   { name: "foam/nanos/auth/Language" },
   { name: "foam/nanos/auth/LastModifiedAware", flags: ['js'] },
   { name: "foam/nanos/auth/LastModifiedAwareInterface", flags:['java']  },
@@ -91,6 +96,7 @@ FOAM_FILES([
   { name: 'foam/nanos/auth/twofactor/authy/AuthyService' },
   { name: 'foam/nanos/demo/DemoObject' },
   { name: 'foam/nanos/demo/Demo' },
+  { name: 'foam/nanos/dig/Format' },
   { name: 'foam/nanos/dig/DUG' },
   { name: 'foam/nanos/demo/relationship/Course' },
   { name: 'foam/nanos/demo/relationship/Professor' },
