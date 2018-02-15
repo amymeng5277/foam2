@@ -33,6 +33,10 @@ foam.CLASS({
       tableWidth: 45
     },
     {
+      class: 'Boolean',
+      name: 'enabled'
+    },
+    {
       class: 'DateTime',
       name: 'lastLogin'
     },
@@ -190,6 +194,11 @@ emailIsSet_ = true;`
       name: 'website',
       displayWidth: 80,
       width: 2048
+    },
+    {
+      class: 'Date',
+      name: 'lastModified',
+      documentation: 'Last modified date'
     }
   ],
 
