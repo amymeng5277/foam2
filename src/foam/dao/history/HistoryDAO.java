@@ -73,16 +73,16 @@ public class HistoryDAO
     User user = (User) x.get("user");
     FObject current = this.find_(x, obj);
 
-    // add new history record
-    Object objectId = ((PropertyInfo) obj.getClassInfo().getAxiomByName("id")).f(obj);
-    HistoryRecord historyRecord = new HistoryRecord();
-    historyRecord.setObjectId(objectId);
-    historyRecord.setUser(formatUserName(user));
-    historyRecord.setTimestamp(new Date());
     if ( current != null ) {
+      // add new history record
+      Object objectId = ( (PropertyInfo) obj.getClassInfo().getAxiomByName("id") ).f(obj);
+      HistoryRecord historyRecord = new HistoryRecord();
+      historyRecord.setObjectId(objectId);
+      historyRecord.setUser(formatUserName(user));
+      historyRecord.setTimestamp(new Date());
       historyRecord.setUpdates(getUpdatedProperties(current, obj));
+      historyDAO_.put_(x, historyRecord);
     }
-    historyDAO_.put_(x, historyRecord);
 
     return super.put_(x, obj);
   }
