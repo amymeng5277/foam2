@@ -7,6 +7,7 @@
 foam.CLASS({
   package: 'foam.nanos.dig',
   name: 'DIG',
+  extends: 'foam.nanos.http.DefaultHttpParameters',
 
   documentation: 'Data Integration Gateway - Perform DAO operations against a web service',
 
@@ -21,11 +22,7 @@ foam.CLASS({
   searchColumns: [],
 
   properties: [
-    {
-        class: 'String',
-        name: 'id',
-        displayWidth: 40
-    },
+    'id',
     {
       class: 'String',
       name: 'daoKey',
@@ -42,18 +39,18 @@ foam.CLASS({
         });
       }
     },
+    'cmd',
+    'format',
     {
-      class: 'Enum',
-      of: 'foam.nanos.dig.Command',
-      name: 'cmd',
-      value: foam.nanos.dig.Command.SELECT
+      class: 'String',
+      name: 'dao',
+      hidden: true,
+      transient: true,
+      postSet: function(old, nu) {
+        this.daoKey = nu;
+      }
     },
-    {
-      class: 'Enum',
-      of: 'foam.nanos.dig.Format',
-      name: 'format',
-      value: foam.nanos.dig.Format.JSON
-    },
+    'q',
     {
         class: 'String',
         name: 'key'
@@ -68,18 +65,7 @@ foam.CLASS({
       displayWidth: 100,
       name: 'subject'
     },
-    {
-      class: 'String',
-      name: 'data',
-      view: { class: 'foam.u2.tag.TextArea', rows: 16, cols: 120 }
-    },
-    {
-      class: 'Reference',
-      of: 'foam.nanos.auth.User',
-      name: 'owner',
-      hidden: true
-      // TODO: set tableCellRenderer
-    },
+    'data',
     {
       class: 'URL',
       // TODO: appears not to work if named 'url', find out why.
@@ -87,13 +73,51 @@ foam.CLASS({
       label: 'URL',
       displayWidth: 120,
       view: 'foam.nanos.dig.LinkView',
-      expression: function(key, data, email, subject, daoKey, cmd, format) {
-        var url = "/service/dig?dao=" + daoKey + "&cmd=" + cmd + "&format=" + format.name.toLowerCase();
+      setter: function() {}, // Prevent from ever getting set
+      expression: function(key, data, email, subject, daoKey, cmd, format, q) {
+        var query = false;
+        var url = "/service/dig";
 
-        if ( key )     url += "?id=" + key;
-        if ( data )    url += "?data=" + data;
-        if ( email )   url += "?email=" + email;
-        if ( subject ) url += "?subject=" + subject;
+        if ( daoKey ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "dao=" + daoKey;
+        }
+        if ( cmd ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "cmd=" + cmd.name.toLowerCase();
+        }
+        if ( format ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "cmd=" + format.name.toLowerCase();
+        }
+        if ( key ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "id=" + key;
+        }
+        if ( data ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "data=" + data;
+        }
+        if ( email ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "email=" + email;
+        }
+        if ( subject ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "subject=" + subject;
+        }
+        if ( q ) {
+          url += query ? "&" : "?";
+          query = true;
+          url += "&q=" + q;
+        }
 
         return url;
       }
